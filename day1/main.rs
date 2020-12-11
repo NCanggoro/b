@@ -4,10 +4,10 @@ fn main() {
   use std::time::{Duration, Instant};
 
   let input_files = 
-    args()
-    .skip(1)
-    .next()
-    .expect("There's no Input File");
+              args()
+              .skip(1)
+              .next()
+              .expect("There's no Input File");
 
   let input = read_to_string(&input_files).unwrap();
 
@@ -28,10 +28,12 @@ fn main() {
 
 fn find_sum(x: &Vec<i32>) -> i32 {
   let n = x.len();
-  for i in 0..n -1 {
-    for j in i+ 1..n {
-      if x[i] + x[j] == 2020 {
-        return x[i] * x[j];
+  for i in 0..n - 2 {
+    for j in i + 1..n - 1 {
+      for k in i + 1..n {
+        if x[i] + x[j] + x[k] == 2020 {
+          return x[i] * x[j] * x[k];
+        }
       }
     }
   }
