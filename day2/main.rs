@@ -30,16 +30,10 @@ fn is_valid_2(mut x: &str) -> bool {
 				.collect::<Vec<_>>();
 	let temp2 = vec[1]
 				.replace(":", "");
-	// println!("{:?}", temp2.chars().nth(0).unwrap());
-	let matched = vec[2]
-				.matches(&temp2)
-				.count();
 	let chars: Vec<char> = vec[2]
-								.chars()
-								.collect();
+									.chars()
+									.collect();
 	for i in 0..2  {
-		// println!("{:?}", chars.len());
-		// println!("{:?}", chars);
 		if(temp[i] > chars.len()) {
 			if(temp2.chars().nth(0).unwrap() == chars[temp[i] -2 ]) {
 				total += 1;
@@ -54,6 +48,8 @@ fn is_valid_2(mut x: &str) -> bool {
 	} else {
 		return false;
 	}
+
+	unreachable!();
 }
 
 fn main() {
@@ -82,6 +78,6 @@ fn main() {
 			x += 1;
 		} 
 	}
-	println!("resn {}", x);
+	println!("{}", x);
 
 } 
