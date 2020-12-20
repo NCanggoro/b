@@ -60,7 +60,7 @@ fn main() {
               .map(|t| t.parse::<usize>().unwrap())
               .collect::<Vec<_>>();
 		let temp2 = &vec[1]
-						.replace(":", "");
+              .replace(":", "");
 		if (is_valid_2(temp, temp2, vec[2])) {
 			x += 1;
 		} 
