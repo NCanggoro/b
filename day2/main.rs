@@ -1,7 +1,7 @@
 fn is_valid(limit: &Vec<usize>,chars: &str,pass: &str) -> bool {
 	let matched = pass
-				.matches(chars)
-				.count();
+          .matches(chars)
+          .count();
 	if(&matched >= &limit[0] && &matched <= &limit[1]) {
 		return true;
 	} else {
@@ -13,8 +13,8 @@ fn is_valid(limit: &Vec<usize>,chars: &str,pass: &str) -> bool {
 fn is_valid_2(limit: &Vec<usize>,chars: &str,pass: &str) -> bool {
 	let mut total = 0;
 	let pass_chars: Vec<char> = pass
-									.chars()
-									.collect();
+                          .chars()
+                          .collect();
 	for i in 0..2  {
 		if(limit[i] > pass_chars.len()) {
 			if(chars.chars().nth(0).unwrap() == pass_chars[limit[i] -2 ]) {
@@ -46,8 +46,8 @@ fn main() {
   let input = read_to_string(&input_files).unwrap();
 
   let processed_input = input
-								.split("\n")
-								.collect::<Vec<_>>();
+                  .split("\n")
+                  .collect::<Vec<_>>();
 
 	let arr = &processed_input.len();
 
