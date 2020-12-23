@@ -1,3 +1,7 @@
+use std::env::args;
+use std::fs::read_to_string;
+use std::time::Instant;
+
 fn is_valid(limit: &Vec<usize>,chars: &str,pass: &str) -> bool {
 	let matched = pass
                 .matches(chars)
@@ -33,9 +37,7 @@ fn is_valid_2(limit: &Vec<usize>,chars: &str,pass: &str) -> bool {
 }
 
 fn main() {
-  use std::env::args;
-	use std::fs::read_to_string;
-	
+	let time  = Instant::now();
 	let mut x = 0;
   let input_files = 
               args()
@@ -51,6 +53,7 @@ fn main() {
 
 	let arr = &processed_input.len();
 
+	let time_elapsed = time.elapsed().as_nanos() as f64 / 1_000_000.0;
 	for i in 0..*arr{
 		let mut vec = &processed_input[i]
                   .split_whitespace()
@@ -66,5 +69,6 @@ fn main() {
 		} 
 	}
 	println!("{}", x);
+	println!("{:.3	}", time_elapsed);
 
 } 
