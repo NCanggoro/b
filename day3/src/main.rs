@@ -17,22 +17,6 @@ fn toboggan_1(x: &Vec<Vec<u8>>, s: (usize, usize)) -> usize {
     count
 }
 
-fn parse_input(input_files: String) -> Vec<Vec<u8>> {
-    input_files
-        .lines()
-        .map(|l| {
-            l.chars()
-                .map(|c| match c {
-                    '.' => 0,
-                    '#' => 1,
-                    _   => panic!("Unexpected character!"),
-                })
-                .collect()
-        })
-        .collect()
-
-}
-
 fn count_tree(input: &Vec<&str>, r: usize, d: usize) -> usize {
     let line_c = input.len();
     println!("{:?} \n {}", input, line_c);
@@ -59,7 +43,7 @@ fn main() {
               .next()
               .expect("There's no Input File");
 
-    let input = parse_input(read_to_string(&input_files).unwrap());
+    // let input = parse_input(read_to_string(&input_files).unwrap());
 
     let open_file = Path::new(&input_files);
     let file = File::open(&open_file).unwrap();
