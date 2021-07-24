@@ -4,22 +4,8 @@ use std::io::{self, BufRead};
 use std::path::Path;
 use std::fs::read_to_string;
 
-fn toboggan_1(x: &Vec<Vec<u8>>, s: (usize, usize)) -> usize {
-    let (s_x, s_y) = s;
-    let mut pos = 0;
-    let mut count = 0;
-    for row in x.iter().step_by(s_y) {
-        if *row.get(pos % (row.len())).unwrap() == 1 {
-            count += 1
-        }
-        pos += s_x;
-    }
-    count
-}
-
-fn count_tree(input: &Vec<&str>, r: usize, d: usize) -> usize {
+fn count_tree(input: &Vec<String>, r: usize, d: usize) -> usize {
     let line_c = input.len();
-    println!("{:?} \n {}", input, line_c);
     let line_l = input[0].len();
     let mut trees = 0;
 
@@ -29,9 +15,13 @@ fn count_tree(input: &Vec<&str>, r: usize, d: usize) -> usize {
     while current < line_c - d {
         current += d;
         pos = (pos + r) % line_l;
+        let item = input[current].chars().nth(pos).unwrap();
+        println!("{}", item);
+        if(item == '#') {
+            trees += 1;
+        }
     }
-
-    pos
+    trees
 }
 
 fn main() {
@@ -43,8 +33,6 @@ fn main() {
               .next()
               .expect("There's no Input File");
 
-    // let input = parse_input(read_to_string(&input_files).unwrap());
-
     let open_file = Path::new(&input_files);
     let file = File::open(&open_file).unwrap();
     let lines = io::BufReader::new(file).lines();
@@ -55,15 +43,16 @@ fn main() {
         }
     }
     
-//    println!("{:?}",toboggan_1(&input, (3,1)));
 
-    let input2 = read_to_string(&input_files).unwrap();
+    // let input2 = read_to_string(&input_files).unwrap();
 
-    let pros_input2 = input2
-                      .split("\n")
-                      .collect::<Vec<&str>>();
+    // let pros_input2 = input2
+    //                   .split("\n")
+    //                   .collect::<Vec<str>>();
+    
+    // println!("{:?}", str_lines);
 
-    count_tree(&pros_input2, 3, 1);
+    println!("{}", count_tree(&str_lines, 3, 1));
 
 
 //    let char_input: Vec<char> = input2
