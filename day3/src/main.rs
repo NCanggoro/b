@@ -4,7 +4,7 @@ use std::io::{self, BufRead};
 use std::path::Path;
 use std::fs::read_to_string;
 
-fn count_tree(input: &Vec<String>, r: usize, d: usize) -> usize {
+fn count_trees(input: &Vec<String>, r: usize, d: usize) -> usize {
     let line_c = input.len();
     let line_l = input[0].len();
     let mut trees = 0;
