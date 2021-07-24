@@ -16,7 +16,7 @@ fn count_tree(input: &Vec<String>, r: usize, d: usize) -> usize {
         current += d;
         pos = (pos + r) % line_l;
         let item = input[current].chars().nth(pos).unwrap();
-        println!("{}", item);
+        // println!("{}", item);
         if(item == '#') {
             trees += 1;
         }
@@ -33,11 +33,20 @@ fn main() {
               .next()
               .expect("There's no Input File");
 
+    // let temp = read_to_string(&input_files).unwrap();
+
+    // println!("{:?}", temp);
+
+    // Better File reader instead of using read_to_string 
+    // cause theres empty string at the last element of vec
+    // idk why help 
     let open_file = Path::new(&input_files);
     let file = File::open(&open_file).unwrap();
     let lines = io::BufReader::new(file).lines();
+    // println!("{:?}", lines);
     let mut str_lines: Vec<String> = vec![];
     for line in lines {
+        // println!("{:?}", line);
         if let Ok(line) = line {
             str_lines.push(line);
         }
@@ -46,27 +55,14 @@ fn main() {
 
     // let input2 = read_to_string(&input_files).unwrap();
 
-    // let pros_input2 = input2
-    //                   .split("\n")
-    //                   .collect::<Vec<str>>();
+    // let pros_input2: Vec<String> = input2
+    //                                 .split("\n")
+    //                                 .map(|s| s.to_string())
+    //                                 .collect();
+    // println!("{:?}", pros_input2);                                
     
     // println!("{:?}", str_lines);
 
     println!("{}", count_tree(&str_lines, 3, 1));
-
-
-//    let char_input: Vec<char> = input2
-//                                .chars()
-//                                .collect();
-
-
-
-//    println!("{:?}", pros_input2);
-//    toboggan_1(char_input, (3,1));
-   
-//    for c in char_input {
-//        println!("{:?}", c);
-//    }
-
 
 }
