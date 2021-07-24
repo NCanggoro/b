@@ -56,7 +56,6 @@ fn main() {
     let input2 = read_to_string(&input_files).unwrap();
 
 
-    //AYYY IT WORKS JUST ADD .filter 
     // but still i dont understand why it produce an empty string
     let pros_input2: Vec<String> = input2
                                     .split("\n")
