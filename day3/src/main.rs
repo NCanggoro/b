@@ -53,16 +53,20 @@ fn main() {
     }
     
 
-    // let input2 = read_to_string(&input_files).unwrap();
+    let input2 = read_to_string(&input_files).unwrap();
 
-    // let pros_input2: Vec<String> = input2
-    //                                 .split("\n")
-    //                                 .map(|s| s.to_string())
-    //                                 .collect();
-    // println!("{:?}", pros_input2);                                
+
+    //AYYY IT WORKS JUST ADD .filter 
+    // but still i dont understand why it produce an empty string
+    let pros_input2: Vec<String> = input2
+                                    .split("\n")
+                                    .filter(|f| !f.is_empty())
+                                    .map(|s| s.to_string())
+                                    .collect();
+    println!("{:?}", pros_input2);                                
     
     // println!("{:?}", str_lines);
 
-    println!("{}", count_tree(&str_lines, 3, 1));
+    println!("{}", count_tree(&pros_input2, 3, 1));
 
 }
