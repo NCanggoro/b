@@ -25,8 +25,6 @@ fn count_trees(input: &Vec<String>, r: usize, d: usize) -> usize {
 }
 
 fn main() {
-    let tree: u32;
-    let pos: u32;
     let input_files = 
               args()
               .skip(1)
@@ -39,7 +37,6 @@ fn main() {
 
     // Better File reader instead of using read_to_string 
     // cause theres empty string at the last element of vec
-    // idk why help 
     let open_file = Path::new(&input_files);
     let file = File::open(&open_file).unwrap();
     let lines = io::BufReader::new(file).lines();
@@ -64,8 +61,6 @@ fn main() {
                                     .collect();
     println!("{:?}", pros_input2);                                
     
-    // println!("{:?}", str_lines);
-
-    println!("{}", count_tree(&pros_input2, 3, 1));
+    println!("{}", count_trees(&pros_input2, 3, 1));
 
 }
