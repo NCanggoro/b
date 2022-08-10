@@ -1,101 +1,126 @@
+use clap::{arg, command, App, Arg, Command};
+use imexcenger::util::helper::{blur_effect, fractal_effect, generate, brighten, invert_image, crop_image, grayscale_effect};
+use std::process;
 
-use clap::{command, Arg};
+fn cli() -> App<'static> {
+    command!()
+        .arg(
+            Arg::new("fractal")
+                .long("fractal")
+                .help("create an fractal image, with <output> as argument")
+                .takes_value(true)
+                .required(false),
+        )
+        .arg(
+            Arg::new("generate")
+                .long("generate")
+                .multiple_values(true)
+                .takes_value(true)
+                .required(false),
+        )
+        .arg(
+            Arg::new("blur")
+                .long("blur")
+                .multiple_values(true)
+                .takes_value(true)
+                .required(false),
+        )
+        .arg(
+            Arg::new("bright")
+                .long("bright")
+                .multiple_values(true)
+                .takes_value(true)
+                .required(false),
+        )
+        .arg(
+            Arg::new("crop")
+                .long("crop")
+                .multiple_values(true)
+                .takes_value(true)
+                .required(false),
+        )
+        .arg(
+            Arg::new("grayscale")
+                .long("grayscale")
+                .multiple_values(true)
+                .takes_value(true)
+                .required(false),
+        )
+        .arg(
+            Arg::new("invert")
+                .long("invert")
+                .multiple_values(true)
+                .takes_value(true)
+                .required(false),
+        )
+}
 
 fn main() {
-    let matches = command!() 
-        .arg(Arg::new("blur")
-            .help("Take 3 arguments blur_rate(f32) input(filename) output(filename)")
-            .short('B')
-            .required(false)
-            .multiple_values(true)
-            .takes_value(true)
-        )
-        .arg(Arg::new("fractal")
-            .short('F')
-            .required(false)
-            .multiple_values(true)
-            .takes_value(true)
-        )
-        .get_matches();
+    // TODO: cargo run infile.png outfile.png --blur 2.5 --invert --rotate 180 --brighten 10
 
-    if let Some(blur) = matches.get_many::<String>("blur") {
-        let args = blur.collect::<Vec<&String>>();
-        blur_effect(args[0].parse::<f32>().unwrap(), &args[1], &args[2]);
-    }
+    let matches = cli().get_matches();
 
     if let Some(fractal) = matches.get_many::<String>("fractal") {
         let args = fractal.collect::<Vec<&String>>();
         fractal_effect(&args[0]);
+        process::exit(256)
     }
 
-}
-
-fn blur_effect(blur: f32, infile: &String, outfile: &String) {
-    let img = image::open(infile).expect("Failed to open INFILE.");
-    let img2 = img.blur(blur);
-    img2.save(outfile).expect("Failed writing OUTFILE.");
-}
-
-fn brighten(bright_rate: i32, infile: &String, outfile: &String) {
-    let img = image::open(infile).expect("Failed to open INFILE.");
-    let img2 = img.brighten(bright_rate);
-
-    img2.save(outfile).expect("Failed writing OUTFILE.");
-}
-
-fn crop(x: u32, y: u32, width: u32, height: u32, infile: &String, outfile: &String) {
-    let img = image::open(infile).expect("Failed to open INFILE");
-    let img2 = img.crop(x, y, width, height);
-    img2.save(outfile).expect("Failed to save OUTFILE");
-
-}
-
-fn grayscale(infile: &String, oufile: &String) {
-    let img = image::open(infile).expect("Failed to open INFILE");
-    let img2 = img.grayscale();
-    img2.save(outfile).expect("Failed to save OUTFILE");
-}
-
-fn invert(infile: String, outfile: String) {
-    let img = image::open(infile).expect("Failed to open INFILE");
-    let img2 = img.invert();
-    img2.save(outfile).expect("Failed to save to OUTFILE");
-}
-
-fn fractal_effect(outfile: &String) {
-    //make it customizable maybe ?
-    let width = 800;
-    let height = 800;
-
-    let mut imgbuf = image::ImageBuffer::new(width, height);
-
-    let scale_x = 3.0 / width as f32;
-    let scale_y = 3.0 / height as f32;
-
-    // Iterate over the coordinates and pixels of the image
-    for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
-        // Use red and blue to be a pretty gradient background
-        // TODO: set argument for each gradient distance
-        let red = (0.3 * x as f32) as u8;
-        let blue = (0.3 * y as f32) as u8;
-
-        // Use green as the fractal foreground (here is the fractal math part)
-        // Or set the fractal as argument
-        let cx = y as f32 * scale_x - 1.5;
-        let cy = x as f32 * scale_y - 1.5;
-
-        let c = num_complex::Complex::new(-0.4, 0.6);
-        let mut z = num_complex::Complex::new(cx, cy);
-
-        let mut green = 0;
-        while green < 255 && z.norm() <= 2.0 {
-            z = z * z + c;
-            green += 1;
-        }
-
-        // set the pixel. red, green, and blue are u8 
-        *pixel = image::Rgb([red, green, blue]);
+    if let Some(gen) = matches.get_many::<String>("generate") {
+        let args = gen.collect::<Vec<&String>>();
+        generate(
+            args[0],
+            args[1].parse::<u8>().unwrap(),
+            args[2].parse::<u8>().unwrap(),
+            args[3].parse::<u8>().unwrap(),
+        );
+        process::exit(256)
     }
 
-    imgbuf.save(outfile).unwrap();
+    if let Some(blur) = matches.get_many::<String>("blur") {
+        let args = blur.collect::<Vec<&String>>();
+        blur_effect(
+            args[2].parse::<f32>().unwrap(), 
+            args[0], 
+            args[1]
+        );
+    }
+
+    if let Some(bright) = matches.get_many::<String>("bright") {
+        let args = bright.collect::<Vec<&String>>();
+        brighten(
+            args[2].parse::<i32>().unwrap(), 
+            args[0], 
+            args[1]
+        );
+    }
+
+    if let Some(crop) = matches.get_many::<String>("crop") {
+        let args = crop.collect::<Vec<&String>>();
+        crop_image(
+            args[4].parse::<u32>().unwrap(), 
+            args[5].parse::<u32>().unwrap(), 
+            args[2].parse::<u32>().unwrap(),
+            args[3].parse::<u32>().unwrap(),
+            args[0],
+            args[1]
+        );
+    }
+
+    if let Some(grayscale) = matches.get_many::<String>("grayscale") {
+        let args = grayscale.collect::<Vec<&String>>();
+        grayscale_effect(
+            args[0],
+            args[1], 
+        );
+    }
+
+    if let Some(invert) = matches.get_many::<String>("invert") {
+        let args = invert.collect::<Vec<&String>>();
+        invert_image(
+            args[0], 
+            args[1]
+        );
+    }
+
 }
