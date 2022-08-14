@@ -1,12 +1,16 @@
-use emale::run;
+use emale::startup::run;
+use emale::configuration::get_config;
+use sqlx::PgPool;
 use std::net::TcpListener;
 
-#[actix_web::main]
+#[tokio::main]
 async fn main() -> std::io::Result<()> {
-	let listener = TcpListener::bind("127.0.0.1:0")
-    .expect("Failed to bind random port");
-	let port = listener.local_addr().unwrap().port();
-	println!("{}", &port);
-	run(listener)?.await
-
+	let config = get_config().expect("Failed to get configuration");
+	let addr = format!("{}:{}", config.application_host, config.application_port);
+	let connection_pool = PgPool::connect(&config.database.connection_strings())
+				.await
+				.expect("Failed connect to database");
+	let listener = TcpListener::bind(addr)?;
+	println!("APPLICATION RUNNING ON {}:{}", config.application_host, config.application_port);
+	run(listener, connection_pool)?.await
 }
