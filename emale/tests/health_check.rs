@@ -1,8 +1,22 @@
 use emale::configuration::{get_config, DatabaseSettings};
+use emale::telemetry::{get_tracing_subscriber, init_tracing_subscriber};
+use once_cell::sync::Lazy;
 use serde::Deserialize;
 use sqlx::{migrate, Connection, Executor, PgConnection, PgPool};
 use std::net::TcpListener;
 use uuid::Uuid;
+
+static TRACING: Lazy<()> = Lazy::new(|| {
+    let default_filter = "info".to_string();
+    let subscriber_name = "test".to_string();
+    if std::env::var("TEST_LOG").is_ok() {
+        let subscriber = get_tracing_subscriber(subscriber_name, default_filter, std::io::stdout);
+        init_tracing_subscriber(subscriber)
+    } else {
+        let subscriber = get_tracing_subscriber(subscriber_name, default_filter, std::io::sink);
+        init_tracing_subscriber(subscriber)
+    }
+});
 
 pub struct TestApp {
     pub address: String,
@@ -118,6 +132,8 @@ pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
 async fn spawn_app() -> TestApp {
     let mut config = get_config().expect("Failed to get configuration");
     config.database.db_name = Uuid::new_v4().to_string();
+
+    Lazy::force(&TRACING);
 
     let db_pool = configure_database(&config.database).await;
 
