@@ -14,7 +14,6 @@ pub struct SubscribeFormData {
   name = "Add new subscriber",
   skip(req, pool),
   fields(
-    req_id  = %Uuid::new_v4(),
     email   = %req.email,
     name    = %req.name
   )

@@ -1,8 +1,8 @@
 use crate::routes::{health_check, subscribe};
-use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpRequest, HttpServer, Responder, HttpResponse};
 use actix_web::dev::{Server};
 use serde::{Serialize};
+use tracing_actix_web::TracingLogger;
 use std::net::TcpListener;
 use sqlx::PgPool;
 
@@ -31,7 +31,7 @@ pub fn run(
   let server = HttpServer::new(move || {
         App::new()
           // middlewares
-          .wrap(Logger::default())
+          .wrap(TracingLogger::default())
           // routes
           .route("/pow2/{num}", web::get().to(pow2))
           .route("/health_check", web::get().to(health_check))
