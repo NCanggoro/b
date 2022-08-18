@@ -1,0 +1,1 @@
+TEST_LOG=true cargo test | bunyan
