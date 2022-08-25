@@ -4,8 +4,13 @@ use secrecy::{Secret, ExposeSecret};
 #[derive(Debug, Deserialize)]
 pub struct Settings {
     pub database: DatabaseSettings,
-    pub application_port: u16,
-    pub application_host: String,
+    pub application: AppSettings
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AppSettings {
+    pub port: u16,
+    pub host: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -38,3 +43,4 @@ impl DatabaseSettings {
         ))
     }
 }
+
