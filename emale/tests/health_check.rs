@@ -1,7 +1,6 @@
 use emale::configuration::{get_config, DatabaseSettings};
 use emale::telemetry::{get_tracing_subscriber, init_tracing_subscriber};
 use once_cell::sync::Lazy;
-use secrecy::ExposeSecret;
 use serde::Deserialize;
 use sqlx::{migrate, Connection, Executor, PgConnection, PgPool};
 use std::net::TcpListener;
@@ -110,7 +109,7 @@ async fn subscribe_return_400_for_invalid_from_data() {
 }
 
 pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
-    let mut connection = PgConnection::connect(&config.connection_strings_without_db().expose_secret())
+    let mut connection = PgConnection::connect_with(&config.without_db())
         .await
         .expect("Failed to connect to database");
     connection
@@ -118,7 +117,7 @@ pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
         .await
         .expect("Failed to create database");
 
-    let connection_pool = PgPool::connect(&config.connection_strings().expose_secret())
+    let connection_pool = PgPool::connect_with(config.with_db())
         .await
         .expect("Failed to connect");
 

@@ -1,0 +1,8 @@
+application:
+  port: 6969
+database:
+  host: "localhost"
+  port:  5434
+  username: "postgres"
+  password: "postgres"
+  db_name: "database_name"

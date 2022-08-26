@@ -1,8 +1,7 @@
 use emale::configuration::get_config;
 use emale::startup::run;
 use emale::telemetry::{get_tracing_subscriber, init_tracing_subscriber};
-use secrecy::ExposeSecret;
-use sqlx::PgPool;
+use sqlx::postgres::PgPoolOptions;
 use std::net::TcpListener;
 
 #[tokio::main]
@@ -14,10 +13,9 @@ async fn main() -> std::io::Result<()> {
     // App
     let config = get_config().expect("Failed to get configuration");
     let addr = format!("{}:{}", config.application.host, config.application.port);
-    let connection_pool =
-        PgPool::connect(&config.database.connection_strings().expose_secret())
-            .await
-            .expect("Failed connect to database");
+    let connection_pool = PgPoolOptions::new()
+            .connect_timeout(std::time::Duration::from_secs(20))
+            .connect_lazy_with(config.database.with_db());
 
     let listener = TcpListener::bind(addr)?;
     println!(
