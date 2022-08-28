@@ -108,6 +108,34 @@ async fn subscribe_return_400_for_invalid_from_data() {
     }
 }
 
+#[tokio::test]
+async fn subscribe_return_400_when_fields_are_present_but_empty() {
+    let app = spawn_app().await;
+    let client = reqwest::Client::new();
+    let test_case = vec![
+        ("name=nc%20nocap", "empty name"),
+        ("name=nc_nocap&email=", "empty email"),
+        ("name=nocap&email=wrong-email-format", "invalid email"),
+    ];
+
+    for (body,description) in test_case {
+        let response = client
+            .post(&format!("{}/subscribe", &app.address))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(body)
+            .send()
+            .await
+            .expect("Failed to execute request");
+
+        assert_eq!(
+            400,
+            response.status().as_u16(),
+            "The API didn't return 400 OK when the payload {}",
+            description
+        )
+    }
+}
+
 pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
     let mut connection = PgConnection::connect_with(&config.without_db())
         .await
