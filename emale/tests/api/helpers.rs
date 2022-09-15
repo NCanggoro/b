@@ -7,6 +7,7 @@ use emale::{
 use once_cell::sync::Lazy;
 use sqlx::{migrate, Connection, Executor, PgConnection, PgPool};
 use uuid::Uuid;
+use wiremock::MockServer;
 
 static TRACING: Lazy<()> = Lazy::new(|| {
     let default_filter = "info".to_string();
@@ -23,10 +24,11 @@ static TRACING: Lazy<()> = Lazy::new(|| {
 pub struct TestApp {
     pub address: String,
     pub db_pool: PgPool,
+    pub email_server: MockServer
 }
 
 impl TestApp {
-    pub async fn post_subsciptions(&self, body: String) -> reqwest::Response {
+    pub async fn post_subscriptions(&self, body: String) -> reqwest::Response {
         reqwest::Client::new()
             .post(&format!("{}/subscribe", &self.address))
             .header("Content-Type", "application/x-www-form-urlencoded")
@@ -40,6 +42,7 @@ impl TestApp {
 pub async fn spawn_app() -> TestApp {
     Lazy::force(&TRACING);
 
+    let email_server = MockServer::start().await;
     // Randomise configuration to ensure
     // test isolation
     let config = {
@@ -47,6 +50,7 @@ pub async fn spawn_app() -> TestApp {
         c.database.db_name = Uuid::new_v4().to_string();
         // Use random OS port
         c.application.port = 0;
+        c.email_client.base_url = email_server.uri();
         c
     };
 
@@ -60,8 +64,9 @@ pub async fn spawn_app() -> TestApp {
     let _ = tokio::spawn(app.run_until_stopped());
 
     TestApp {
-        address: address,
+        address,
         db_pool: get_connection_pool(&config.database),
+        email_server
     }
 }
 

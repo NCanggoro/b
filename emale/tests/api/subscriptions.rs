@@ -1,4 +1,6 @@
 use crate::helpers::spawn_app;
+use wiremock::{Mock, ResponseTemplate};
+use wiremock::matchers::{path, method};
 
 
 #[tokio::test]
@@ -7,7 +9,13 @@ async fn subscribe_return_200_for_valid_form_data() {
 
     let body = "name=nc%20nocap&email=nc_nocap%40gmail.com";
 
-    let res = app.post_subsciptions(body.into()).await;
+    Mock::given(path("/email"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .mount(&app.email_server)
+        .await;
+
+    let res = app.post_subscriptions(body.into()).await;
 
     assert_eq!(200, res.status().as_u16());
 
@@ -31,7 +39,7 @@ async fn subscribe_return_400_for_invalid_from_data() {
     ];
 
     for (invalid_body, err_message) in test_case {
-        let res = app.post_subsciptions(invalid_body.into()).await;
+        let res = app.post_subscriptions(invalid_body.into()).await;
 
         assert_eq!(400, res.status().as_u16(), "{}", err_message);
     }
@@ -47,7 +55,7 @@ async fn subscribe_return_400_when_fields_are_present_but_empty() {
     ];
 
     for (body,description) in test_case {
-        let response = app.post_subsciptions(body.into()).await;
+        let response = app.post_subscriptions(body.into()).await;
 
         assert_eq!(
             400,
@@ -56,4 +64,19 @@ async fn subscribe_return_400_when_fields_are_present_but_empty() {
             description
         )
     }
+}
+
+#[tokio::test]
+async fn subscribe_sends_a_confirmation_email_for_valid_data() {
+    let app = spawn_app().await;
+    let body = "name=nc%20nocap&email=ncnocap%40gmail.com";
+
+    Mock::given(path("email"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(1)
+        .mount(&app.email_server)
+        .await;
+    
+    app.post_subscriptions(body.into()).await;
 }
