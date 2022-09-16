@@ -31,6 +31,7 @@ tracing-actix-web= "0.5"
 secrecy = { version = "0.8", features = ["serde"] }
 unicode-segmentation = "1.9.0"
 validator = "0.16.0"
+rand = { version = "0.8", features=["std_rng"] }
 reqwest = { version = "0.11.11", default-features = false, features = ["json", "rustls-tls"] }
 
 [dev-dependencies]
