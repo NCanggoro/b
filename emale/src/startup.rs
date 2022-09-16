@@ -1,4 +1,5 @@
-use crate::{routes::{health_check, subscribe}, configuration::Settings};
+use crate::routes::{health_check, subscribe, confirm};
+use crate::configuration::Settings;
 use actix_web::{web, App, HttpRequest, HttpServer, Responder, HttpResponse};
 use crate::email_client::EmailClient;
 use crate::configuration::DatabaseSettings;
@@ -17,6 +18,13 @@ pub struct Application {
   port: u16,
   server: Server
 }
+
+// define a wrapper type in order to retrieve the URL
+// in the `subscribe` handler.
+// Retrieval from the context, in actix-web, is type-based: using
+// a raw `String` would expose to conflicts.
+pub struct ApplicationBaseUrl(pub String);
+
 
 impl Application {
   pub async fn build(config: Settings) -> Result<Self, std::io::Error> {
@@ -42,7 +50,12 @@ impl Application {
   
     let listener = TcpListener::bind(address)?;
     let port = listener.local_addr().unwrap().port();
-    let server = run(listener, connection_pool, email_client)?;
+    let server = run(
+      listener, 
+      connection_pool, 
+      email_client,
+      config.application.base_url
+    )?;
 
     Ok(Self { port, server })
   }
@@ -79,10 +92,12 @@ pub fn get_connection_pool(
 pub fn run(
   address: TcpListener,
   db_pool: PgPool,
-  email_client: EmailClient
+  email_client: EmailClient,
+  base_url: String
 ) -> Result<Server, std::io::Error> {
   let db_pool = web::Data::new(db_pool);
   let email_client = web::Data::new(email_client);
+  let base_url = web::Data::new(ApplicationBaseUrl(base_url));
   let server = HttpServer::new(move || {
         App::new()
           // middlewares
@@ -91,9 +106,11 @@ pub fn run(
           .route("/pow2/{num}", web::get().to(pow2))
           .route("/health_check", web::get().to(health_check))
           .route("/subscribe", web::post().to(subscribe))
+          .route("/subscribe/confirm", web::get().to(confirm))
           // database
           .app_data(db_pool.clone())
           .app_data(email_client.clone())
+          .app_data(base_url.clone())
       })
     .listen(address)?
     .run();
