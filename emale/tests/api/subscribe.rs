@@ -85,9 +85,9 @@ async fn subscribe_return_400_when_fields_are_present_but_empty() {
 async fn subscribe_sends_a_confirmation_with_a_link() {
     let app = spawn_app().await;
     let body = "name=nc%20nocap&email=ncnocap%40gmail.com";
-
+    
     Mock::given(path("email"))
-        .and(method("POST"))
+    .and(method("POST"))
         .respond_with(ResponseTemplate::new(200))
         .expect(1)
         .mount(&app.email_server)
@@ -97,6 +97,22 @@ async fn subscribe_sends_a_confirmation_with_a_link() {
 
     let email_request = &app.email_server.received_requests().await.unwrap()[0];
     let confirmation_link = app.get_confirmation_link(email_request);
-
+    
     assert_eq!(confirmation_link.html, confirmation_link.plain_text);
+}
+
+#[tokio::test]
+async fn subscribe_fails_if_fatal_database_error() {
+    let app = spawn_app().await;
+    let body = "name=nc%20nocap&email=ncnocap%40gmail.com";
+
+    sqlx::query!("ALTER TABLE subscriber DROP column email;")
+        .execute(&app.db_pool)
+        .await
+        .unwrap();
+
+    
+    let response = app.post_subscriptions(body.into()).await;
+
+    assert_eq!(response.status().as_u16(), 500);
 }
