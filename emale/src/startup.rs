@@ -1,4 +1,4 @@
-use crate::routes::{health_check, subscribe, confirm};
+use crate::routes::{health_check, subscribe, confirm, publish_newsletter};
 use crate::configuration::Settings;
 use actix_web::{web, App, HttpRequest, HttpServer, Responder, HttpResponse};
 use crate::email_client::EmailClient;
@@ -107,6 +107,7 @@ pub fn run(
           .route("/health_check", web::get().to(health_check))
           .route("/subscribe", web::post().to(subscribe))
           .route("/subscribe/confirm", web::get().to(confirm))
+          .route("/newsletters", web::post().to(publish_newsletter))
           // database
           .app_data(db_pool.clone())
           .app_data(email_client.clone())
