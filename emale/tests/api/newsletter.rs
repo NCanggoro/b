@@ -118,3 +118,24 @@ async fn create_confirmed_subs(app: &TestApp) {
 		.unwrap();
 
 }
+
+#[tokio::test]
+async fn request_missing_authorization_rejected() {
+	let app = spawn_app().await;
+
+	let response = reqwest::Client::new()
+		.post(&format!("{}/newsletters", &app.address))
+		.json(&serde_json::json!({
+			"title": "Title",
+			"content": {
+				"text": "plain text",
+				"html": "<p>Body</p>"
+			}
+		}))
+		.send()
+		.await
+		.expect("Failed to execute post request");
+
+	assert_eq!(401, response.status().as_u16());
+	assert_eq!(r#"Basic realm="publish""#, response.headers()["WWW-Authenticate"]);
+}
