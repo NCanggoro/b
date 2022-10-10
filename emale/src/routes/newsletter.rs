@@ -1,12 +1,12 @@
 use actix_web::{web, HttpResponse, ResponseError, HttpRequest};
 use actix_web::http::{StatusCode, header};
 use actix_web::http::header::{HeaderMap, HeaderValue};
-use secrecy::{Secret, ExposeSecret};
-use sha3::Digest;
+use secrecy::{Secret};
 use sqlx::PgPool;
 use anyhow::Context;
-
-use crate::{email_client::EmailClient, domain::SubscriberEmail};
+use crate::email_client::EmailClient;
+use crate::domain::SubscriberEmail;
+use crate::authentication::{AuthError, Credentials, validate_credentials};
 
 use super::error_chain_fmt;
 
@@ -24,11 +24,6 @@ pub struct Content {
 
 struct ConfirmedSubs {
     email: SubscriberEmail,
-}
-
-struct Credentials {
-	username: String,
-	password: Secret<String>
 }
  
 fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, anyhow::Error> {
@@ -60,34 +55,6 @@ fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, anyhow::Erro
 		password: Secret::new(password) 
 	})
 
-}
-
-async fn validate_credentials(
-	credentials: Credentials,
-	pool:&PgPool
-) -> Result<uuid::Uuid, PublishError> {
-	let password_hash = sha3::Sha3_256::digest(
-		credentials.password.expose_secret().as_bytes()
-	);
-	let password_hash  = format!("{:x}", password_hash);
-	let user_id: Option<_> = sqlx::query!(
-		r#"
-		select user_id
-		FROM users
-		where username = $1 and password_hash = $2
-		"#,
-		credentials.username,
-		password_hash
-	)
-	.fetch_optional(pool)
-	.await
-	.context("Failed to perform query to validate auth credentials")
-	.map_err(PublishError::UnexpectedError)?;
-
-	user_id
-		.map(|row| row.user_id)
-		.ok_or_else(|| anyhow::anyhow!("Invalid username or password"))
-		.map_err(PublishError::AuthError)
 }
 
 #[tracing::instrument(name = "Get confirmed subs", skip(pool))]
@@ -129,7 +96,16 @@ pub async fn publish_newsletter(
 		.map_err(PublishError::AuthError)?;
 	tracing::Span::current()
 		.record("username", &tracing::field::display(&credentials.username));
-	let user_id = validate_credentials(credentials, &pool).await?;
+	let user_id = validate_credentials(credentials, &pool)
+		.await
+		// match on `AuthError`'s variants, pass the errors into the 
+		// constructors for `PublishError` variants. This ensures that
+		// the context of the top-level wrapper is preserved when the 
+		// error is logged by middleware
+		.map_err(|e| match e {
+			AuthError::InvalidCredential(_) => PublishError::AuthError(e.into()),
+			AuthError::UnexpectedError(_) => PublishError::UnexpectedError(e.into())
+		})?;
 	tracing::Span::current()
 		.record("username", &tracing::field::display(&user_id));
 	let subs = get_confirmed_subs(&pool).await?;
