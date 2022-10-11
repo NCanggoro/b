@@ -11,6 +11,7 @@ use crate::routes::{
 	subscribe,
 };
 use actix_web::dev::Server;
+use actix_web::web::Data;
 use actix_web::{
 	web, 
 	App, 
@@ -19,6 +20,7 @@ use actix_web::{
 	HttpServer, 
 	Responder
 };
+use secrecy::Secret;
 use serde::Serialize;
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::net::TcpListener;
@@ -66,6 +68,7 @@ impl Application {
             connection_pool,
             email_client,
             config.application.base_url,
+            HmacSecret(config.application.hmac_secret)
         )?;
 
         Ok(Self { port, server })
@@ -100,6 +103,7 @@ pub fn run(
     db_pool: PgPool,
     email_client: EmailClient,
     base_url: String,
+    hmac_secret: HmacSecret
 ) -> Result<Server, std::io::Error> {
     let db_pool = web::Data::new(db_pool);
     let email_client = web::Data::new(email_client);
@@ -117,12 +121,16 @@ pub fn run(
             .route("/subscribe", web::post().to(subscribe))
             .route("/subscribe/confirm", web::get().to(confirm))
             .route("/newsletters", web::post().to(publish_newsletter))
-            // database
+            // app pool
             .app_data(db_pool.clone())
             .app_data(email_client.clone())
             .app_data(base_url.clone())
+            .app_data(Data::new(hmac_secret.clone()))
     })
     .listen(address)?
     .run();
     Ok(server)
 }
+
+#[derive(Debug, Clone)]
+pub struct HmacSecret(pub Secret<String>);
