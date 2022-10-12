@@ -75,11 +75,35 @@ pub struct TestApp {
     pub address: String,
     pub db_pool: PgPool,
     pub email_server: MockServer,
+    pub api_client: reqwest::Client,
     pub port: u16,
     pub test_user: TestUser
 }
 
 impl TestApp {
+
+    pub async fn post_login<Body>(&self, body: &Body) -> reqwest::Response
+    where
+        Body: serde::Serialize,
+    {
+        self.api_client
+            .post(&format!("{}/login", &self.address))
+            .form(body)
+            .send()
+            .await
+            .expect("Failed to execute request")
+    }
+
+    pub async fn get_login_html(&self) -> String {
+        self.api_client
+            .get(&format!("{}/login", &self.address))
+            .send()
+            .await
+            .expect("Failed to execute request")
+            .text()
+            .await
+            .unwrap()
+    }
 
     pub fn get_confirmation_link(
         &self,
@@ -111,7 +135,7 @@ impl TestApp {
     }
 
     pub async fn post_subscriptions(&self, body: String) -> reqwest::Response {
-        reqwest::Client::new()
+        self.api_client
             .post(&format!("{}/subscribe", &self.address))
             .header("Content-Type", "application/x-www-form-urlencoded")
             .body(body)
@@ -121,7 +145,7 @@ impl TestApp {
     }
 
     pub async fn post_newletters(&self, body: serde_json::Value) -> reqwest::Response {
-        reqwest::Client::new()
+        self.api_client
             .post(&format!("{}/newsletters", &self.address))
             .basic_auth(&self.test_user.username, Some(&self.test_user.password))
             .json(&body)
@@ -152,6 +176,12 @@ pub async fn spawn_app() -> TestApp {
         .await
         .expect("Failed to build app");
 
+    let api_client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .cookie_store(true)
+        .build()
+        .unwrap();
+
     
     let app_port = app.port();
     let _ = tokio::spawn(app.run_until_stopped());
@@ -159,6 +189,7 @@ pub async fn spawn_app() -> TestApp {
         address: format!("http://localhost:{}", app_port),
         db_pool: get_connection_pool(&config.database),
         email_server,
+        api_client,
         port: app_port,
         test_user: TestUser::generate()
     };

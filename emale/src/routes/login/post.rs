@@ -1,10 +1,12 @@
-use actix_http::{header::LOCATION, StatusCode};
-use actix_web::{HttpResponse, web, ResponseError, error::InternalError};
-use hmac::{Hmac, Mac};
-use secrecy::{Secret, ExposeSecret};
+use actix_http::header::LOCATION;
+use actix_web::{HttpResponse, web};
+use actix_web::cookie::Cookie;
+use actix_web::error::InternalError;
+use actix_web_flash_messages::FlashMessage;
+use secrecy::{Secret};
 use sqlx::PgPool;
-
-use crate::{authentication::{Credentials, validate_credentials, AuthError}, routes::error_chain_fmt, startup::HmacSecret};
+use crate::authentication::{Credentials, validate_credentials, AuthError};
+use crate::routes::error_chain_fmt;
 
 #[derive(serde::Deserialize)]
 pub struct FormData {
@@ -19,7 +21,6 @@ pub struct FormData {
 pub async fn login(
 	form: web::Form<FormData>, 
 	pool: web::Data<PgPool>,
-    secret: web::Data<HmacSecret>
 ) -> Result<HttpResponse, InternalError<LoginError>> {
 	let credentials = Credentials {
 		username: form.0.username,
@@ -42,43 +43,23 @@ pub async fn login(
                 AuthError::InvalidCredential(_) => LoginError::AuthError(e.into()),
                 AuthError::UnexpectedError(_) => LoginError::UnexpectedError(e.into())
             };
-            let query_string = format!(
-                "error={}",
-                urlencoding::Encoded::new(e.to_string())
-            );
-            let hmac_tag = {
-                let mut mac = Hmac::<sha2::Sha256>::new_from_slice(
-                    secret.0.expose_secret().as_bytes()
-                ).unwrap();
-                mac.update(query_string.as_bytes());
-                mac.finalize().into_bytes()
-            };
+
+            FlashMessage::error(e.to_string()).send();
+
             let response = HttpResponse::SeeOther()
                 .insert_header((
                     LOCATION,
-                    format!("login?{}&tag={:x}", query_string, hmac_tag)
+                    format!("/login")
                 ))
                 .finish();
             Err(InternalError::from_response(e, response))
         }
     }
-
-	// let user_id = validate_credentials(credentials, &pool)
-	// 	.await
-	// 	.map_err(|e| match e {
-	// 		AuthError::InvalidCredential(_) => LoginError::AuthError(e.into()),
-	// 		AuthError::UnexpectedError(_) => LoginError::UnexpectedError(e.into())
-	// 	})?;
-	// tracing::Span::current().record("user_id", &tracing::field::display(&user_id));
-
-	// Ok(HttpResponse::SeeOther()
-	// 	.insert_header((LOCATION, "/"))
-	// 	.finish())
 }
 
 #[derive(thiserror::Error)]
 pub enum LoginError {
-	#[error("Auth failed")]
+	#[error("Authentication failed")]
 	AuthError(#[source] anyhow::Error),
 	#[error("Something went wrong")]
 	UnexpectedError(#[from] anyhow::Error)

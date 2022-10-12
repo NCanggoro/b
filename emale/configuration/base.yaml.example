@@ -1,6 +1,6 @@
 application:
   port: 6969
-  hmac_secret: "some-long-random-key"
+  hmac_secret: "soehdisnuiseutinudointeduisoi-asnoh_Aonsuheoip-aoup"
 database:
   host: "localhost"
   port:  5434
