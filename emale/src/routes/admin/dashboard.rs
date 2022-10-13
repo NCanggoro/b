@@ -1,8 +1,11 @@
+use actix_http::header::LOCATION;
 use actix_session::Session;
 use actix_web::{HttpResponse, web, http::header::ContentType};
 use anyhow::Context;
 use sqlx::PgPool;
 use uuid::Uuid;
+
+use crate::session_state::TypedSession;
 
 #[tracing::instrument(
 	name="Get username",
@@ -27,16 +30,19 @@ async fn get_username(
 }
 
 pub async fn admin_dashboard(
-	session: Session,
+	session: TypedSession,
 	pool: web::Data<PgPool>
 ) -> Result<HttpResponse, actix_web::Error> {
     let username = if let Some(user_id) = session
-		.get::<Uuid>("user_id")
+		.get_user_id()
 		.map_err(error_500)?
 	{
 		get_username(user_id, &pool).await.map_err(error_500)?
 	} else {
-		todo!()
+		return Ok(HttpResponse::SeeOther()
+			.insert_header((LOCATION, "/login"))
+			.finish()
+		);
 	};
 	Ok(HttpResponse::Ok()
 		.content_type(ContentType::html())
