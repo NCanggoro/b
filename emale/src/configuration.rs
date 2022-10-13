@@ -9,7 +9,8 @@ use crate::domain::SubscriberEmail;
 pub struct Settings {
     pub database: DatabaseSettings,
     pub application: AppSettings,
-    pub email_client: EmailClientSettings
+    pub email_client: EmailClientSettings,
+    pub redis_uri: Secret<String>
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -36,7 +37,7 @@ pub struct AppSettings {
     pub port: u16,
     pub host: String,
     pub base_url: String,
-    pub hmac_secret: Secret<String>
+    pub hmac_secret: Secret<String>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
