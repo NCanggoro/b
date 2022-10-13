@@ -22,7 +22,7 @@ actix-web-flash-messages = { version = "0.3", features = ["cookies"] }
 serde = { version = "1.0", features = ["derive"] }
 serde-aux = "3"
 tokio = { version = "1.17.0", features = ["macros", "rt-multi-thread"] }
-uuid = { version = "0.8.1", features = ["v4"] }
+uuid = { version = "0.8.1", features = ["v4", "serde"] }
 chrono = "0.4.15"
 log = "0.4.17"
 tracing = { version = "0.1", features = ["log"] }

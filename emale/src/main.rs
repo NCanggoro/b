@@ -1,9 +1,9 @@
-use emale::configuration::{get_config};
-use emale::startup::{Application};
+use emale::configuration::get_config;
+use emale::startup::Application;
 use emale::telemetry::{get_tracing_subscriber, init_tracing_subscriber};
 
 #[tokio::main]
-async fn main() -> std::io::Result<()> {
+async fn main() -> anyhow::Result<()> {
     // Logger
     let subscriber = get_tracing_subscriber("emale".into(), "info".into(), std::io::stdout);
     init_tracing_subscriber(subscriber);

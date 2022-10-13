@@ -4,7 +4,9 @@ mod subscribe_confirm;
 mod newsletter;
 mod home;
 mod login;
+mod admin;
 
+pub use admin::*;
 pub use login::*;
 pub use home::*;
 pub use health_check::*;
