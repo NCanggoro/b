@@ -1,5 +1,4 @@
 use actix_http::header::LOCATION;
-use actix_session::Session;
 use actix_web::{HttpResponse, web};
 use actix_web::error::InternalError;
 use actix_web_flash_messages::FlashMessage;

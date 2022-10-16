@@ -1,11 +1,10 @@
-use actix_http::header::LOCATION;
-use actix_session::Session;
 use actix_web::{HttpResponse, web, http::header::ContentType};
 use anyhow::Context;
 use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::session_state::TypedSession;
+use crate::utils::{error_500, see_other};
 
 #[tracing::instrument(
 	name="Get username",
@@ -39,10 +38,8 @@ pub async fn admin_dashboard(
 	{
 		get_username(user_id, &pool).await.map_err(error_500)?
 	} else {
-		return Ok(HttpResponse::SeeOther()
-			.insert_header((LOCATION, "/login"))
-			.finish()
-		);
+		return Ok(see_other("/login"))
+		
 	};
 	Ok(HttpResponse::Ok()
 		.content_type(ContentType::html())
@@ -55,6 +52,9 @@ pub async fn admin_dashboard(
 					</head>
 					<body>
 						<p>Welcome {username}!</p>
+						<ol>
+							<li><a href="/admin/password/">Change Password</a></li>
+						</ol>
 					</body>
 				</html>"#
 		))
@@ -62,9 +62,3 @@ pub async fn admin_dashboard(
 }
 
 // preserving error 500 root cause for logging
-fn error_500<T>(e: T) -> actix_web::Error
-where
-    T: std::fmt::Debug + std::fmt::Display + 'static,
-{
-	actix_web::error::ErrorInternalServerError(e)
-}
