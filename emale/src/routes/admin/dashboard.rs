@@ -10,7 +10,7 @@ use crate::utils::{error_500, see_other};
 	name="Get username",
 	skip(pool)
 )]
-async fn get_username(
+pub async fn get_username(
 	user_id: Uuid,
 	pool: &PgPool
 ) -> Result<String, anyhow::Error> {
@@ -54,6 +54,11 @@ pub async fn admin_dashboard(
 						<p>Welcome {username}!</p>
 						<ol>
 							<li><a href="/admin/password/">Change Password</a></li>
+              				<li>
+              				  <form name="logoutForm" action="/admin/logout" method="post">
+									<input type="submit" value="logout">
+              				  </form>
+              				</li>
 						</ol>
 					</body>
 				</html>"#

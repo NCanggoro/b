@@ -1,31 +1,22 @@
+use crate::authentication::middleware::reject_users;
 use crate::configuration::DatabaseSettings;
 use crate::configuration::Settings;
 use crate::email_client::EmailClient;
+use crate::routes::change_password;
+use crate::routes::change_password_form;
+use crate::routes::logout;
 use crate::routes::{
-    confirm, 
-	health_check, 
-	home, 
-	login, 
-	login_form, 
-	publish_newsletter, 
-	subscribe,
-    admin_dashboard
+    admin_dashboard, confirm, health_check, home, login, login_form, publish_newsletter, subscribe,
 };
-use actix_session::SessionMiddleware;
 use actix_session::storage::RedisSessionStore;
+use actix_session::SessionMiddleware;
 use actix_web::cookie::Key;
 use actix_web::dev::Server;
-use actix_web::{
-	web, 
-	App, 
-	HttpRequest, 
-	HttpResponse, 
-	HttpServer, 
-	Responder
-};
-use actix_web_flash_messages::FlashMessagesFramework;
+use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer, Responder};
 use actix_web_flash_messages::storage::CookieMessageStore;
-use secrecy::{Secret, ExposeSecret};
+use actix_web_flash_messages::FlashMessagesFramework;
+use actix_web_lab::middleware::from_fn;
+use secrecy::{ExposeSecret, Secret};
 use serde::Serialize;
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::net::TcpListener;
@@ -74,8 +65,9 @@ impl Application {
             email_client,
             config.application.base_url,
             config.application.hmac_secret,
-            config.redis_uri
-        ).await?;
+            config.redis_uri,
+        )
+        .await?;
 
         Ok(Self { port, server })
     }
@@ -110,7 +102,7 @@ pub async fn run(
     email_client: EmailClient,
     base_url: String,
     hmac_secret: Secret<String>,
-    redis_uri: Secret<String>
+    redis_uri: Secret<String>,
 ) -> Result<Server, anyhow::Error> {
     let db_pool = web::Data::new(db_pool);
     let email_client = web::Data::new(email_client);
@@ -124,17 +116,27 @@ pub async fn run(
             // middlewares
             .wrap(TracingLogger::default())
             .wrap(message_framework.clone())
-            .wrap(SessionMiddleware::new(redis_store.clone(), secret_key.clone()))
+            .wrap(SessionMiddleware::new(
+                redis_store.clone(),
+                secret_key.clone(),
+            ))
             // routes
             .route("/", web::get().to(home))
             .route("/pow2/{num}", web::get().to(pow2))
             .route("/health_check", web::get().to(health_check))
             .route("/login", web::get().to(login_form))
             .route("/login", web::post().to(login))
-            .route("/admin/dashboard", web::get().to(admin_dashboard))
             .route("/subscribe", web::post().to(subscribe))
             .route("/subscribe/confirm", web::get().to(confirm))
             .route("/newsletters", web::post().to(publish_newsletter))
+			.service(
+				web::scope("/admin")
+					.wrap(from_fn(reject_users))
+					.route("/dashboard", web::get().to(admin_dashboard))
+					.route("/password", web::get().to(change_password_form))
+					.route("/password", web::post().to(change_password))
+					.route("/logout", web::post().to(logout)),
+			)
             // app pool
             .app_data(db_pool.clone())
             .app_data(email_client.clone())
