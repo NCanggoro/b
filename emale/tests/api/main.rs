@@ -5,3 +5,4 @@ mod subscribe_confirm;
 mod newsletter;
 mod login;
 mod admin_dashboard;
+mod change_password;
