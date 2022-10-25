@@ -69,6 +69,14 @@ impl TestUser {
         .await
         .expect("Failed to store user for test");
     }
+
+	pub async fn login(&self, app: &TestApp) {
+		app.post_login(&serde_json::json!({
+			"username": &app.test_user.username,
+			"password": &app.test_user.password
+		}))
+		.await;
+	}
 }
 
 pub struct TestApp {
@@ -144,15 +152,26 @@ impl TestApp {
             .expect("Failed to execute request")
     }
 
-    pub async fn post_newletters(&self, body: serde_json::Value) -> reqwest::Response {
-        self.api_client
-            .post(&format!("{}/newsletters", &self.address))
-            .basic_auth(&self.test_user.username, Some(&self.test_user.password))
-            .json(&body)
-            .send()
-            .await
-            .expect("Failed to execute request")
+
+    pub async fn get_publish_newsletter(&self) -> reqwest::Response {
+		self.api_client
+			.get(&format!("{}/admin/newsletter", &self.address))
+			.send()
+			.await
+			.expect("Failed to execute request")
     }
+
+	pub async fn post_publish_newsletter<Body>(&self, body: &Body) -> reqwest::Response
+		where
+			Body: serde::Serialize
+		{
+			self.api_client
+				.post(&format!("{}/admin/newsletters", &self.address))
+				.form(body)
+				.send()
+				.await
+				.expect("Failed to execute request")
+		}
 
     pub async fn get_admin_dashboard(&self) -> reqwest::Response {
         self.api_client
@@ -201,6 +220,8 @@ impl TestApp {
 			.await
 			.expect("Failed to execute request")
 	}
+
+	
 
 }
 

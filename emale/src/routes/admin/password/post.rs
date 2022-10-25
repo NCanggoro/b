@@ -3,11 +3,9 @@ use actix_web_flash_messages::FlashMessage;
 use secrecy::{ExposeSecret, Secret};
 use sqlx::PgPool;
 
-use crate::authentication::middleware::reject_users;
 use crate::authentication::{validate_credentials, AuthError, Credentials, UserId};
 use crate::authentication;
 use crate::routes::get_username;
-use crate::session_state::TypedSession;
 use crate::utils::{error_500, see_other};
 
 #[derive(serde::Deserialize)]
