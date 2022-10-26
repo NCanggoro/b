@@ -1,9 +1,11 @@
-use crate::authentication::{UserId};
+use crate::authentication::UserId;
 use crate::domain::SubscriberEmail;
 use crate::email_client::EmailClient;
-use crate::utils::{error_500, see_other};
-use actix_web::web::ReqData;
-use actix_web::{web, HttpResponse,};
+use crate::idempotency::{
+    get_saved_response, save_response, try_proccesing, IdempotencyKey, NextAction,
+};
+use crate::utils::{error_400, error_500, see_other};
+use actix_web::{web, HttpResponse};
 use actix_web_flash_messages::FlashMessage;
 use anyhow::Context;
 use sqlx::PgPool;
@@ -13,6 +15,7 @@ pub struct FormData {
     title: String,
     text_content: String,
     html_content: String,
+    idempotency_key: String,
 }
 
 #[tracing::instrument(
@@ -23,25 +26,37 @@ pub struct FormData {
 
 pub async fn publish_newsletter(
     form: web::Form<FormData>,
-    user_id: ReqData<UserId>,
+    user_id: web::ReqData<UserId>,
     pool: web::Data<PgPool>,
     email_client: web::Data<EmailClient>,
 ) -> Result<HttpResponse, actix_web::Error> {
+    // destructure form to avoid upsetting borrow checker
+    let user_id = user_id.into_inner();
+    let FormData {
+        title,
+        text_content,
+        html_content,
+        idempotency_key,
+    } = form.0;
+    let idempotency_key: IdempotencyKey = idempotency_key.try_into().map_err(error_400)?;
+    match try_proccesing(&pool, &idempotency_key, *user_id)
+        .await
+        .map_err(error_500)?
+    {
+        NextAction::StartProcessing => {}
+        NextAction::ReturnSavedResponse(saved_response) => {
+            success_message().send();
+            return Ok(saved_response);
+        }
+    }
     let subs = get_confirmed_subs(&pool).await.map_err(error_500)?;
     for subscriber in subs {
         match subscriber {
             Ok(subscriber) => {
                 email_client
-                    .send_email(
-                        &subscriber.email,
-                        &form.title,
-                        &form.html_content,
-                        &form.text_content,
-                    )
+                    .send_email(&subscriber.email, &title, &html_content, &text_content)
                     .await
-                    .with_context(|| 
-						format!("failed to send newsletter {}", subscriber.email
-					))
+                    .with_context(|| format!("failed to send newsletter {}", subscriber.email))
                     .map_err(error_500)?;
             }
             Err(error) => {
@@ -53,9 +68,17 @@ pub async fn publish_newsletter(
             }
         }
     }
-    FlashMessage::info("Newsletter has been published").send();
+    success_message().send();
+    let response = see_other("/admin/newsletters");
+    let response = save_response(&pool, &idempotency_key, *user_id, response)
+        .await
+        .map_err(error_500)?;
 
-    Ok(see_other("/admin/newsletters"))
+    Ok(response)
+}
+
+fn success_message() -> FlashMessage {
+    FlashMessage::info("Newsletter has been published")
 }
 
 struct ConfirmedSubs {

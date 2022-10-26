@@ -56,7 +56,8 @@ async fn newsletters_not_delivered_to_uncofirmed_subs() {
 	let newsletter_request_body = serde_json::json!({
 		"title": "title",
 		"text_content": "text content",
-		"html_content": "<p>HTML CONTENT</p>"
+		"html_content": "<p>HTML CONTENT</p>",
+		"idempotency_key": uuid::Uuid::new_v4().to_string()
 	});
 
 	let response = app.post_publish_newsletter(&newsletter_request_body).await;
@@ -80,7 +81,8 @@ async fn newsletters_delivered_to_cofirmed_subs() {
 	let newsletter_request_body = serde_json::json!({
 		"title": "title",
 		"text_content": "text content",
-		"html_content": "<p>HTML CONTENT</p>"
+		"html_content": "<p>HTML CONTENT</p>",
+		"idempotency_key": uuid::Uuid::new_v4().to_string()
 	});
 
 	let response = app.post_publish_newsletter(&newsletter_request_body).await;
@@ -113,4 +115,81 @@ async fn must_logged_in_to_publish_newsletter() {
 
 	assert_eq!(response.status().as_u16(), 303);
 	assert_eq!(response.headers().get("LOCATION").unwrap(), "/login");
+}
+
+#[tokio::test]
+async fn create_newsletter_idempotent() {
+	let app = spawn_app().await;
+	create_confirmed_subscriber(&app).await;
+	app.test_user.login(&app).await;
+
+	Mock::given(path("/email"))
+		.and(method("POST"))
+		.respond_with(ResponseTemplate::new(200))
+		.expect(1)
+		.mount(&app.email_server)
+		.await;
+	
+	let body = serde_json::json!({
+		"title": "Title",
+		"text_content": "content",
+		"html_content": "<p>content</p>",
+		"idempotency_key": uuid::Uuid::new_v4().to_string()
+	});
+
+	let response = app.post_publish_newsletter(&body).await;
+	assert_eq!(response.status().as_u16(), 303);
+	assert_eq!(response.headers().get("LOCATION").unwrap(), "/admin/newsletters");
+
+	let newsletter_page = app.get_publish_newsletter().await;
+	assert!(
+		newsletter_page
+			.text()
+			.await
+			.unwrap()
+			.contains("<p><i>Newsletter has been published</i></p>")
+	);
+	
+	let response = app.post_publish_newsletter(&body).await;
+	assert_eq!(response.status().as_u16(), 303);
+	assert_eq!(response.headers().get("LOCATION").unwrap(), "/admin/newsletters");
+
+	let newsletter_page = app.get_publish_newsletter().await;
+	assert!(
+		newsletter_page
+			.text()
+			.await
+			.unwrap()
+			.contains("<p><i>Newsletter has been published</i></p>")
+	);
+}
+
+#[tokio::test]
+async fn concurrent_form_submission_is_handled() {
+	let app = spawn_app().await;
+	create_confirmed_subscriber(&app).await;
+	app.test_user.login(&app).await;
+
+	Mock::given(path("/email"))
+	.and(method("POST"))
+	.respond_with(ResponseTemplate::new(200))
+	.expect(1)
+	.mount(&app.email_server)
+	.await;
+
+let body = serde_json::json!({
+	"title": "Title",
+	"text_content": "content",
+	"html_content": "<p>content</p>",
+	"idempotency_key": uuid::Uuid::new_v4().to_string()
+});
+
+let response1 = app.post_publish_newsletter(&body);
+let response2 = app.post_publish_newsletter(&body);
+
+let (response1, response2) = tokio::join!(response1, response2);
+
+assert_eq!(response1.status(), response2.status());
+assert_eq!(response1.text().await.unwrap(), response2.text().await.unwrap());
+
 }
