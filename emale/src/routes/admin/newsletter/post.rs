@@ -39,16 +39,16 @@ pub async fn publish_newsletter(
         idempotency_key,
     } = form.0;
     let idempotency_key: IdempotencyKey = idempotency_key.try_into().map_err(error_400)?;
-    match try_proccesing(&pool, &idempotency_key, *user_id)
+    let transaction = match try_proccesing(&pool, &idempotency_key, *user_id)
         .await
         .map_err(error_500)?
     {
-        NextAction::StartProcessing => {}
+        NextAction::StartProcessing(t) => t,
         NextAction::ReturnSavedResponse(saved_response) => {
             success_message().send();
             return Ok(saved_response);
         }
-    }
+    };
     let subs = get_confirmed_subs(&pool).await.map_err(error_500)?;
     for subscriber in subs {
         match subscriber {
@@ -70,7 +70,7 @@ pub async fn publish_newsletter(
     }
     success_message().send();
     let response = see_other("/admin/newsletters");
-    let response = save_response(&pool, &idempotency_key, *user_id, response)
+    let response = save_response(transaction, &idempotency_key, *user_id, response)
         .await
         .map_err(error_500)?;
 
