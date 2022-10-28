@@ -3,7 +3,7 @@ use emale::{
     configuration::{get_config, DatabaseSettings},
     startup::Application,
     startup::get_connection_pool,
-    telemetry::{get_tracing_subscriber, init_tracing_subscriber},
+    telemetry::{get_tracing_subscriber, init_tracing_subscriber}, email_client::EmailClient, issue_delivery_worker::{ExecutionOutcome, try_execute_task},
 };
 use linkify::{LinkFinder, LinkKind};
 use once_cell::sync::Lazy;
@@ -83,12 +83,25 @@ pub struct TestApp {
     pub address: String,
     pub db_pool: PgPool,
     pub email_server: MockServer,
+    pub email_client: EmailClient,
     pub api_client: reqwest::Client,
     pub port: u16,
     pub test_user: TestUser
 }
 
 impl TestApp {
+
+	pub async fn dispatch_all_pending_emails(&self) {
+		loop {
+			if let ExecutionOutcome::EmptyQueue =
+				try_execute_task(&self.db_pool, &self.email_client)
+					.await
+					.unwrap()
+				{
+					break;
+				}
+		}
+	}
 
     pub async fn post_login<Body>(&self, body: &Body) -> reqwest::Response
     where
@@ -155,7 +168,7 @@ impl TestApp {
 
     pub async fn get_publish_newsletter(&self) -> reqwest::Response {
 		self.api_client
-			.get(&format!("{}/admin/newsletter", &self.address))
+			.get(&format!("{}/admin/newsletters", &self.address))
 			.send()
 			.await
 			.expect("Failed to execute request")
@@ -259,6 +272,7 @@ pub async fn spawn_app() -> TestApp {
         address: format!("http://localhost:{}", app_port),
         db_pool: get_connection_pool(&config.database),
         email_server,
+        email_client: config.email_client.client(),
         api_client,
         port: app_port,
         test_user: TestUser::generate()
