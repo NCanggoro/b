@@ -1,0 +1,3 @@
+configuration/base.yaml
+configuration/local.yaml
+.env
