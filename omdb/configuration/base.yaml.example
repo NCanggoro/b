@@ -1,5 +1,6 @@
 application:
   port: 6969
+  hmac_secret: "tanoud89123t1s2hpao[asoeh123st1h.an12312n3hdanonaod123taoev40192s"
 database:
   host: "localhost"
   port:  5432
