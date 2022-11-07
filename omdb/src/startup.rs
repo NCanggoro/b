@@ -4,6 +4,7 @@ use crate::configuration::{DatabaseSettings, Settings};
 use actix_web::{HttpRequest, Responder, HttpResponse};
 use actix_web::{dev::Server, web, App, HttpServer};
 use sqlx::{postgres::PgPoolOptions, PgPool};
+use crate::routes::{login, register_user};
 
 pub struct Application {
     port: u16,
@@ -13,7 +14,7 @@ pub struct Application {
 pub struct ApplicationBaseUrl(String);
 
 impl Application {
-    pub async fn build(config: Settings) -> Result<Self, std::io::Error> {
+    pub async fn build(config: Settings) -> Result<Self, anyhow::Error> {
         let connection_pool = get_connection_pool(&config.database);
         let addr = format!("{}:{}", config.application.host, config.application.port);
 
@@ -64,11 +65,15 @@ async fn pow2(req: HttpRequest) -> impl Responder {
 pub fn run (
     addr: TcpListener,
     db_pool: PgPool
-) -> Result<Server, std::io::Error> {
+) -> Result<Server, anyhow::Error> {
     let db_pool = web::Data::new(db_pool);
-  let server = HttpServer::new(move || {
+    
+    let server = HttpServer::new(move || {
         App::new()
           .route("/pow2/{num}", web::get().to(pow2))
+          .route("/", web::get().to(login))
+          .route("/register", web::post().to(register_user))
+          .route("/login", web::post().to(login))
           .app_data(db_pool.clone())
       })
     .listen(addr)?

@@ -1,13 +1,9 @@
-use std::net::TcpListener;
-
-use actix_web::{get, HttpServer, web, App};
-use omdb::{configuration::get_config, startup::Application, telemetry::{get_tracing_subscriber, init_tracing_subscriber}};
-use sqlx::{PgPool, postgres::PgPoolOptions};
-use omdb::startup::run;
-// use omdb::startup::Application;
+use omdb::startup::Application;
+use omdb::configuration::get_config;
+use omdb::telemetry::{get_tracing_subscriber, init_tracing_subscriber};
 
 #[tokio::main]
-async fn main () -> std::io::Result<()> {
+async fn main () -> anyhow::Result<()> {
     let tracing_subscriber = get_tracing_subscriber("ombd".into(), "info".into(), std::io::stdout);
     init_tracing_subscriber(tracing_subscriber);
     
