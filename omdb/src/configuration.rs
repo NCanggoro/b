@@ -6,7 +6,8 @@ use sqlx::postgres::PgConnectOptions;
 #[derive(Debug, Deserialize, Clone)]
 pub struct Settings {
     pub database: DatabaseSettings,
-    pub application: AppSettings
+    pub application: AppSettings,
+    pub redis_uri: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]

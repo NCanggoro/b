@@ -1,10 +1,15 @@
 use actix_web::{HttpResponse, web};
+use rand::Rng;
+use rand::distributions::Alphanumeric;
 use secrecy::Secret;
 use sqlx::PgPool;
+use sha3::{Digest, Keccak256};
+use redis::Commands;
 
 use crate::authentication::{Credentials, AuthError};
 
 use crate::authentication::validate_credentials;
+use crate::errors::{AppError, AppErrorType, error_500};
 use crate::utils::JsonResponse;
 
 
@@ -16,8 +21,9 @@ pub struct LoginBodyRequest {
 
 pub async fn login(
     body: web::Json::<LoginBodyRequest>,
-    pool: web::Data::<PgPool>
-) -> Result<HttpResponse, LoginError> {
+    pool: web::Data::<PgPool>,
+    redis: web::Data<redis::Client>
+) -> Result<HttpResponse, AppError> {
     let LoginBodyRequest {
         email,
         password
@@ -31,18 +37,48 @@ pub async fn login(
     match validate_credentials(credentials, &pool).await {
         Ok(user_info) => {
             let (user_id, user_email) = user_info;
+            let mut redis_con = redis.get_connection().map_err(|e| {
+                AppError {
+                    cause: None,
+                    error_type: AppErrorType::InternalError,
+                    message: Some("Failed to connect to redis client".to_string())
+                }
+            })?;
+            let mut hasher = Keccak256::new();
+
+            let rand_s: String = rand::thread_rng()
+                .sample_iter(Alphanumeric)
+                .take(10)
+                .map(char::from)
+                .collect();
+                
+            hasher.update(format!("{}{}", &user_id, rand_s).as_bytes());
+            
+            let token = format!("{:x}", hasher.finalize());
+
+            let _: () = redis_con.set(&token, user_id.to_string()).map_err(|e| {
+                AppError {
+                    cause: None,
+                    error_type: AppErrorType::InternalError,
+                    message: Some("Failed to save key value to redis".to_string())
+                }
+            })?;
+
+            insert_token(&pool, &token, &user_id).await?;
+
             let response = JsonResponse {
                 status_code: 200,
                 message: "Login successful".to_string(),
                 body: serde_json::json!({
                     "id":  user_id,
-                    "email": user_email
+                    "email": user_email,
+                    "token": token
                 })
             };
 
             response.response_message().map_err(|e| {
-                LoginError {
-                    error_type: LoginErrorType::UnauthorizedEror,
+                AppError {
+                    error_type: AppErrorType::UnauthorizedErorr,
                     cause: None,
                     message: Some("Failed to Unauthorized".to_string())
                 }
@@ -50,15 +86,15 @@ pub async fn login(
             }
         Err(e) => {
              let e = match e  {
-                AuthError::InvalideCredential(_) => LoginErrorType::UnauthorizedEror,
-                AuthError::UnexpectedError(_) => LoginErrorType::InternalError
+                AuthError::InvalideCredential(_) => AppErrorType::UnauthorizedErorr,
+                AuthError::UnexpectedError(_) => AppErrorType::InternalError
              };
              let mut message: Option<String> = None;
-             if let e = LoginErrorType::UnauthorizedEror {
+             if let e = AppErrorType::UnauthorizedErorr {
                 message = Some("User not found".to_string());
              }
 
-             Err(LoginError {
+             Err(AppError {
                 cause: None,
                 error_type: e,
                 message
@@ -68,59 +104,30 @@ pub async fn login(
     }
 }
 
-#[derive(Debug)]
-pub enum LoginErrorType {
-    InternalError,
-    BadRequestError,
-    UnauthorizedEror
-}
 
-#[derive(Debug)]
-pub struct LoginError {
-    message: Option<String>,
-    cause: Option<String>,
-    error_type: LoginErrorType
-}
-impl LoginError {
-    pub fn message(&self) -> String {
-        match &*self {
-            Self {
-                message: Some(message),
-                ..
-            } => message.clone(),
-            _ => "An unexpected error has occured".to_string()
+pub async fn insert_token(
+    pool: &PgPool,
+    token: &String,
+    user_id: &i32
+) -> Result<(), AppError> {
+    sqlx::query!(
+        r#"
+            UPDATE users
+            SET auth_token = $1
+            WHERE user_id = $2
+        "#,
+        token,
+        user_id
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| {
+        AppError {
+            cause: None,
+            error_type: AppErrorType::InternalError,
+            message: Some("Failed to set auth_token".to_string())
         }
-    }
-}
+    })?;
 
-#[derive(serde::Serialize)]
-struct LoginErrorResponse {
-    status_code: u16,
-    message: String
-}
-
-impl std::fmt::Display for LoginError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
-impl actix_web::error::ResponseError for LoginError {
-    // Error base
-    // Turn this error to Error struct
-    // like this https://github.com/nemesiscodex/actix-todo/blob/master/src/errors.rs
-    fn error_response(&self) -> HttpResponse {
-        HttpResponse::build(self.status_code()).json(LoginErrorResponse{
-            status_code:  self.status_code().as_u16(),
-            message: self.message()
-        })
-    }
-
-    fn status_code(&self) -> actix_http::StatusCode {
-        match self.error_type {
-            LoginErrorType::InternalError => actix_http::StatusCode::INTERNAL_SERVER_ERROR,
-            LoginErrorType::BadRequestError => actix_http::StatusCode::BAD_REQUEST,
-            LoginErrorType::UnauthorizedEror => actix_http::StatusCode::UNAUTHORIZED
-        }
-    }
+    Ok(())
 }

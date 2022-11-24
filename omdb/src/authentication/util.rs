@@ -32,15 +32,10 @@ pub async fn validate_credentials(
         expected_password = stored_password;
     }
 
-    spawn_blocking_with_tracing(move || {
-        verify_password_hash(
-            expected_password,
-            credential.password
-        )
-    })
-    .await
-    .context("Failed to spawn blocking task")
-    .map_err(AuthError::UnexpectedError)??;
+    verify_password_hash(
+        expected_password,
+        credential.password
+    )?;
 
     user_info.ok_or_else(||
         AuthError::InvalideCredential(anyhow::anyhow!("Email / password is invalid"))

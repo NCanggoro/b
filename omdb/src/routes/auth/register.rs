@@ -4,7 +4,7 @@ use argon2::{password_hash::SaltString, Algorithm, Version, Argon2, Params, Pass
 use secrecy::{Secret, ExposeSecret};
 use sqlx::PgPool;
 
-use crate::{error::error_500, utils::JsonResponse};
+use crate::{errors::error_500, utils::JsonResponse};
 
 #[derive(serde::Deserialize)]
 pub struct RegisterBodyRequest {
