@@ -2,7 +2,7 @@ use actix_web::{HttpResponse};
 
 #[derive(serde::Serialize)]
 pub struct JsonResponse<T> {
-    pub status_code: u8,
+    pub status_code: u16,
     pub message: String,
     pub body: T
 }
