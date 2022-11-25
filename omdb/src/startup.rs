@@ -1,7 +1,7 @@
 use crate::configuration::{DatabaseSettings, Settings};
 use actix_web_lab::middleware::from_fn;
 use std::net::TcpListener;
-use crate::routes::{login, register_user, get_movies_search, get_movie_by_name, get_movie_by_id};
+use crate::routes::{login, register_user, get_movies_search, get_movie_by_name, get_movie_by_id, save_movie, get_favorite_movies};
 use crate::middleware::check_token;
 use actix_web::{dev::Server, web, App, HttpServer};
 use actix_web::{HttpRequest, HttpResponse, Responder};
@@ -77,10 +77,12 @@ pub async fn run(
                     //search by 
                     // general-search
                     .route("/movies", web::get().to(get_movies_search))
+                    .route("/movies", web::post().to(save_movie))
                     // title-name
                     .route("/movies/title", web::get().to(get_movie_by_name))
                     // id
                     .route("/movies/id", web::get().to(get_movie_by_id))
+                    .route("/my/movies", web::get().to(get_favorite_movies))
                     .route("/pow2/{num}", web::get().to(pow2))
             )
             .app_data(db_pool.clone())
