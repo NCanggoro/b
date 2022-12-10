@@ -41,14 +41,14 @@ pub fn get_connection_pool(config: &DatabaseSettings) -> PgPool {
 
 #[derive(serde::Serialize)]
 struct Power {
-    num: u32,
+    num: i32,
 }
 
 async fn pow2(req: HttpRequest) -> impl Responder {
-    let body: u32 = req.match_info().get("num").unwrap().parse::<u32>().unwrap();
+    let body = req.match_info().get("num").unwrap().parse::<i32>().unwrap();
 
     let res = Power {
-        num: u32::pow(body, 2),
+        num: i32::pow(body, 2),
     };
 
     HttpResponse::Ok().json(&res)
@@ -69,6 +69,7 @@ pub async fn run(
 
     let server = HttpServer::new(move || {
         App::new()
+            .route("/pow2/{num}", web::get().to(pow2))
             .route("/register", web::post().to(register_user))
             .route("/login", web::post().to(login))
             .service(
@@ -77,13 +78,13 @@ pub async fn run(
                     //search by 
                     // general-search
                     .route("/movies", web::get().to(get_movies_search))
-                    .route("/movies", web::post().to(save_movie))
                     // title-name
                     .route("/movies/title", web::get().to(get_movie_by_name))
                     // id
                     .route("/movies/id", web::get().to(get_movie_by_id))
+                    //my_movies
+                    .route("/my/movies", web::post().to(save_movie))
                     .route("/my/movies", web::get().to(get_favorite_movies))
-                    .route("/pow2/{num}", web::get().to(pow2))
             )
             .app_data(db_pool.clone())
             .app_data(redis_client.clone())
