@@ -1,5 +1,4 @@
-use actix_web::{HttpResponse, web, guard::AnyGuard};
-use anyhow::Context;
+use actix_web::{HttpResponse, web};
 use argon2::{password_hash::SaltString, Algorithm, Version, Argon2, Params, PasswordHasher};
 use secrecy::{Secret, ExposeSecret};
 use sqlx::PgPool;
@@ -13,6 +12,11 @@ pub struct RegisterBodyRequest {
     password: Secret<String>
 }
 
+#[tracing::instrument(
+    skip(pool, body),
+    fields(email)
+)]
+
 pub async fn register_user(
     pool: web::Data<PgPool>,
     body: web::Json<RegisterBodyRequest>
@@ -22,6 +26,10 @@ pub async fn register_user(
         username,
         password
     } = body.0;
+
+    tracing::Span::current()
+        .record("email", &tracing::field::display(&email));
+
     let password_hash = compute_password_hash(password)
         .map_err(error_500)?;
 
@@ -74,7 +82,7 @@ fn compute_password_hash(
     .hash_password(password.expose_secret().as_bytes(), &salt)?
     .to_string();
 
-    Ok((Secret::new(password_hash)))
+    Ok(Secret::new(password_hash))
 }
 
 pub fn error_chain_fmt(
@@ -105,7 +113,7 @@ impl std::fmt::Display for StoreUserError {
 
 impl std::error::Error for StoreUserError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        Some(&self.0    )
+        Some(&self.0)
     }
 }
 
