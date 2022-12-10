@@ -1,7 +1,6 @@
-use actix_http::Version;
 use argon2::{Argon2, Algorithm, Params, PasswordHasher};
 use argon2::password_hash::SaltString;
-use fake::faker::internet::{self, en::SafeEmail};
+use fake::faker::internet::en::SafeEmail;
 use fake::Fake;
 use omdb::{telemetry::{get_tracing_subscriber, init_tracing_subscriber}, configuration::{get_config, DatabaseSettings}, startup::{Application, get_connection_pool}};
 use once_cell::sync::Lazy;
@@ -71,13 +70,25 @@ impl TestUser {
         .expect("Failed to store user for test");
     }
 
-	pub async fn login(&self, app: &TestApp) {
+	pub async fn login(&self, app: &TestApp) -> serde_json::Value {
 		app.post_login(&serde_json::json!({
-			"username": &app.test_user.username,
+			"email": &app.test_user.email,
 			"password": &app.test_user.password
 		}))
-		.await;
+		.await
+        .json::<serde_json::Value>()
+        .await
+        .expect("Failed to parse response")
 	}
+
+
+    pub async fn get_token(&self, app: &TestApp) -> Option<String> {
+        let res = self.login(app).await;
+        match res.get("body") {
+            Some(body) => Some(body.get("token").unwrap().as_str().unwrap().to_string()),
+            _ => None
+        }
+    }
 }
 
 pub struct TestApp {
@@ -108,8 +119,8 @@ impl TestApp {
         &self, 
         body: &Body
     ) -> reqwest::Response
-    where 
-        Body: serde::Serialize
+        where 
+            Body: serde::Serialize
     {
         self.api_client
             .post(&format!("{}/login",&self.address))
@@ -118,6 +129,25 @@ impl TestApp {
             .await
             .expect("Request Failed")
     }
+    pub async fn get_movie_by_title<Query>(
+        &self, 
+        query: &Query, 
+        token: String
+    ) -> reqwest::Response 
+        where 
+            Query: serde::Serialize
+    {
+
+        println!("{:?}", &token);
+        self.api_client
+            .get(&format!("{}/movies/title", &self.address))
+            .header("auth-token", token.to_string())
+            .query(query)
+            .send()
+            .await
+            .expect("Failed to execute request")
+    }
+
 }
 
 pub async fn spawn_app() -> TestApp {
@@ -146,7 +176,6 @@ pub async fn spawn_app() -> TestApp {
         .expect("Failed to build app");
 
     let api_client = reqwest::Client::builder()
-        .redirect(reqwest::redirect::Policy::none())
         .build()
         .unwrap();
 
