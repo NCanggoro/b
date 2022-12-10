@@ -7,18 +7,30 @@ where
     actix_web::error::ErrorInternalServerError(e)
 }
 
-pub fn apperror_500<T>(e: T) -> AppError 
-where
-    T: std::fmt::Debug + std::fmt::Display + 'static,
-{
-    AppError { message: None, cause: None, error_type: AppErrorType::InternalError }
+pub fn apperror_500() -> AppError {
+    AppError { 
+        message: None, 
+        cause: None, 
+        error_type: AppErrorType::InternalError 
+    }
+}
+
+pub fn apperror_400(
+    message: Option<String>
+) -> AppError {
+    AppError { 
+        message, 
+        cause: None, 
+        error_type: AppErrorType::BadRequestError 
+    }
 }
 
 #[derive(Debug)]
 pub enum AppErrorType {
     InternalError,
     BadRequestError,
-    UnauthorizedErorr
+    UnauthorizedErorr,
+    NotFoundError
 }
 
 #[derive(Debug)]
@@ -61,6 +73,7 @@ impl actix_web::error::ResponseError for AppError {
 
     fn status_code(&self) -> actix_http::StatusCode {
         match self.error_type {
+            AppErrorType::NotFoundError => actix_http::StatusCode::NOT_FOUND,
             AppErrorType::InternalError => actix_http::StatusCode::INTERNAL_SERVER_ERROR,
             AppErrorType::BadRequestError => actix_http::StatusCode::BAD_REQUEST,
             AppErrorType::UnauthorizedErorr => actix_http::StatusCode::UNAUTHORIZED
