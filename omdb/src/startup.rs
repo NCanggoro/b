@@ -54,11 +54,6 @@ async fn pow2(req: HttpRequest) -> impl Responder {
     HttpResponse::Ok().json(&res)
 }
 
-#[derive(serde::Deserialize)]
-struct KeyStruct {
-    key: String,
-}
-
 pub async fn run(
     addr: TcpListener,
     db_pool: PgPool,
