@@ -5,15 +5,6 @@ use sqlx::PgPool;
 
 use crate::errors::{AppError, AppErrorType};
 
-// #[derive(Clone, Debug)]
-// pub struct Token(i32);
-
-// impl std::fmt::Display for Token {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         self.0.fmt(f)
-//     }
-// }
-
 pub async fn check_token(
     mut req: ServiceRequest,
     next: Next<impl MessageBody>,
@@ -25,7 +16,7 @@ pub async fn check_token(
         let e = anyhow::anyhow!("auth-token header not found");
         return Err(InternalError::from_response(e, response).into())
     }
-    match is_token_correct(&pool, req.headers().get("auth-token").unwrap().to_str().unwrap().to_string()).await? {
+    match is_token_correct(&pool, auth_token.unwrap().to_str().unwrap().to_string()).await? {
         Some(_) => {
             next.call(req).await
         },
