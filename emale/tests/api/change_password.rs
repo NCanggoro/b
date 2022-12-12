@@ -80,7 +80,6 @@ async fn current_password_valid() {
 	assert_eq!(response.headers().get("LOCATION").unwrap(), "/admin/password");
 
 	let html_page = app.get_admin_dashboard_html().await;
-	dbg!(html_page);
 	
 }
 

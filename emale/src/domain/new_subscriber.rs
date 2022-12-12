@@ -1,3 +1,5 @@
+use secrecy::Secret;
+
 use crate::domain::SubscriberName;
 use crate::domain::SubscriberEmail;
 

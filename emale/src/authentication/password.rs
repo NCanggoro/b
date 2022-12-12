@@ -84,7 +84,6 @@ pub async fn validate_credentials(
 	)
 	.await
 	.map_err(AuthError::UnexpectedError)?
-
 	{
 		user_id = Some(stored_user_id);
 		expected_password_hash = stored_password_hash;

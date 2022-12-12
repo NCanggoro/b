@@ -3,4 +3,4 @@ application:
   base_url: "http://127.0.0.1"
   hmac_secret: "local_hmac_secret_natod_atoednda_atednagdua_aonenhaodu-anohdun-anoudoiipgsjxb.w"
 database:
-  with_ssl: false
+  with_ssl: false 
