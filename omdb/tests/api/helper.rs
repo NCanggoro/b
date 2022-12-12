@@ -129,6 +129,26 @@ impl TestApp {
             .await
             .expect("Request Failed")
     }
+
+    pub async fn get_movie_by_search<Query>(
+        &self, 
+        query: &Query, 
+        token: String
+    ) -> reqwest::Response 
+        where 
+            Query: serde::Serialize
+    {
+
+        println!("{:?}", &token);
+        self.api_client
+            .get(&format!("{}/movies", &self.address))
+            .header("auth-token", token.to_string())
+            .query(query)
+            .send()
+            .await
+            .expect("Failed to execute request")
+    }
+
     pub async fn get_movie_by_title<Query>(
         &self, 
         query: &Query, 
@@ -141,6 +161,25 @@ impl TestApp {
         println!("{:?}", &token);
         self.api_client
             .get(&format!("{}/movies/title", &self.address))
+            .header("auth-token", token.to_string())
+            .query(query)
+            .send()
+            .await
+            .expect("Failed to execute request")
+    }
+
+    pub async fn get_movie_by_id<Query>(
+        &self, 
+        query: &Query, 
+        token: String
+    ) -> reqwest::Response 
+        where 
+            Query: serde::Serialize
+    {
+
+        println!("{:?}", &token);
+        self.api_client
+            .get(&format!("{}/movies/id", &self.address))
             .header("auth-token", token.to_string())
             .query(query)
             .send()
