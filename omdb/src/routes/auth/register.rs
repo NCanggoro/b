@@ -3,7 +3,7 @@ use argon2::{password_hash::SaltString, Algorithm, Version, Argon2, Params, Pass
 use secrecy::{Secret, ExposeSecret};
 use sqlx::PgPool;
 
-use crate::{errors::{error_500, AppError}, utils::JsonResponse};
+use crate::{errors::{error_500, AppError, apperror_500}, utils::JsonResponse};
 
 #[derive(serde::Deserialize)]
 pub struct RegisterBodyRequest {
@@ -62,10 +62,15 @@ async fn store_user(
     .execute(pool)
     .await
     .map_err(|e| {
-        AppError {
-            cause: None,
-            message: Some(e.to_string()),
-            error_type: crate::errors::AppErrorType::InternalError
+        match e  {
+            sqlx::Error::Database(_) => {
+                AppError {
+                    cause: None,
+                    message: Some("email is already registered".to_string()),
+                    error_type: crate::errors::AppErrorType::InternalError
+                }
+            },
+            _ => apperror_500(Some(e.to_string()))
         }
     })?;
 

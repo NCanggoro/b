@@ -7,9 +7,9 @@ where
     actix_web::error::ErrorInternalServerError(e)
 }
 
-pub fn apperror_500() -> AppError {
+pub fn apperror_500(message: Option<String>) -> AppError {
     AppError { 
-        message: None, 
+        message, 
         cause: None, 
         error_type: AppErrorType::InternalError 
     }
