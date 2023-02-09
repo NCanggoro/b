@@ -76,7 +76,7 @@ pub async fn login(
                 })
             };
 
-            response.response_message().map_err(|e| {
+            response.response_message().map_err(|_| {
                 AppError {
                     error_type: AppErrorType::UnauthorizedErorr,
                     cause: None,
@@ -121,7 +121,7 @@ pub async fn insert_token(
     )
     .execute(pool)
     .await
-    .map_err(|e| {
+    .map_err(|_| {
         AppError {
             cause: None,
             error_type: AppErrorType::InternalError,

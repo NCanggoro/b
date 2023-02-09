@@ -30,7 +30,7 @@ pub async fn save_movie(
             Ok(HttpResponse::Conflict().json(response))
         },
         Err(sqlx::Error::RowNotFound) => {
-            save_movie_query(&body, &pool).await.map_err(|e| {
+            save_movie_query(&body, &pool).await.map_err(|_| {
                 AppError {
                     cause: None,
                     error_type: AppErrorType::InternalError,

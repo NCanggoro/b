@@ -45,7 +45,7 @@ pub async fn get_movies_search(
         body: response
     };
 
-    response.response_message().map_err(|e| {
+    response.response_message().map_err(|_| {
         AppError {
             error_type: AppErrorType::UnauthorizedErorr,
             cause: None,

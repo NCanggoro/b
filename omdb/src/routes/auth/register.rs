@@ -3,7 +3,7 @@ use argon2::{password_hash::SaltString, Algorithm, Version, Argon2, Params, Pass
 use secrecy::{Secret, ExposeSecret};
 use sqlx::PgPool;
 
-use crate::{errors::error_500, utils::JsonResponse};
+use crate::{errors::{error_500, AppError}, utils::JsonResponse};
 
 #[derive(serde::Deserialize)]
 pub struct RegisterBodyRequest {
@@ -34,8 +34,7 @@ pub async fn register_user(
         .map_err(error_500)?;
 
     store_user(&pool, RegisterBodyRequest { email, username, password: password_hash})
-        .await
-        .map_err(error_500)?;
+        .await?;
 
     let response = JsonResponse {
         status_code: 200,
@@ -50,7 +49,7 @@ pub async fn register_user(
 async fn store_user(
     pool: &PgPool,
     body: RegisterBodyRequest    
-) -> Result<(), StoreUserError> {
+) -> Result<(), AppError> {
     sqlx::query!(
         "
             INSERT INTO users(username, email, password)
@@ -63,7 +62,11 @@ async fn store_user(
     .execute(pool)
     .await
     .map_err(|e| {
-        StoreUserError(e)
+        AppError {
+            cause: None,
+            message: Some(e.to_string()),
+            error_type: crate::errors::AppErrorType::InternalError
+        }
     })?;
 
     Ok(())
@@ -96,29 +99,4 @@ pub fn error_chain_fmt(
         current = cause.source();
     }  
     Ok(())
-}
-
-
-
-pub struct StoreUserError(sqlx::Error);
-
-impl std::fmt::Display for StoreUserError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "Database error was encountered when trying to store user"
-        )
-    }
-}
-
-impl std::error::Error for StoreUserError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        Some(&self.0)
-    }
-}
-
-impl std::fmt::Debug for StoreUserError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        error_chain_fmt(self, f)
-    }   
 }
